@@ -1,11 +1,758 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Foundry Report</title>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foundry Monitoring Report</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ApexCharts for interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom styles to ensure chart labels and tooltips look good */
+        body {
+            font-family: 'sans-serif';
+            background-color: #f3f4f6;
+        }
+        .apexcharts-tooltip {
+            background: #2d3748 !important;
+            color: white;
+            border: 1px solid #4a5568 !important;
+        }
+        .apexcharts-tooltip-title {
+            background: #1f2937 !important;
+            border-bottom: 1px solid #4a5568 !important;
+            font-weight: bold;
+        }
+        .apexcharts-xcrosshairs, .apexcharts-ycrosshairs {
+            opacity: 0.5;
+        }
+        .apexcharts-legend-text {
+            color: #4b5563 !important;
+        }
+        .apexcharts-xaxis-label, .apexcharts-yaxis-label {
+            fill: #6b7280;
+        }
+        .apexcharts-datalabel, .apexcharts-datalabels-group {
+            font-weight: bold;
+            fill: #374151;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div id="app" class="font-sans min-h-screen p-4 sm:p-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-700">
+                Foundry Monitoring Report
+            </h1>
+            <p class="text-xl sm:text-2xl text-gray-600 mt-2">
+                July 2025
+            </p>
+            <p class="text-sm text-gray-500 mt-1">
+                Comparison: 1 July – 30 July 2025 vs. Previous Period
+            </p>
+        </header>
+
+        <!-- 1. Summary Metrics -->
+        <div class="mb-12 p-8 bg-white rounded-2xl shadow-xl">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="circle-gauge" class="text-indigo-500"></i>
+                <span>1. Summary Metrics</span>
+            </h2>
+            <div id="summary-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"></div>
+            <div id="summary-chart"></div>
+        </div>
+
+        <!-- 2. New Customer Details -->
+        <div class="mb-12 p-8 bg-white rounded-2xl shadow-xl">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="trending-up" class="text-indigo-500"></i>
+                <span>2. New Customer Details</span>
+            </h2>
+            <ul id="new-customers-list" class="list-none space-y-4"></ul>
+        </div>
+
+        <!-- 3. Key Usage Groupings -->
+        <div class="mb-12 p-8 bg-white rounded-2xl shadow-xl">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="pie-chart" class="text-indigo-500"></i>
+                <span>3. Key Usage Groupings</span>
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div>
+                    <p id="total-active-customers" class="text-lg text-gray-700 mb-4"></p>
+                    <div id="usage-groups-chart"></div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Software ON - Feature Breakdown</h3>
+                    <div id="feature-breakdown-chart"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 4. ChargeMix Module Usage -->
+        <div class="mb-12 p-8 bg-white rounded-2xl shadow-xl">
+             <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="flask-conical" class="text-indigo-500"></i>
+                <span>4. ChargeMix Module Usage</span>
+            </h2>
+            <div class="overflow-x-auto mb-8">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Customer Name</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Created/Modified (Prev)</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Created/Modified (Curr)</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Optimized ChargeMix Count</th>
+                        </tr>
+                    </thead>
+                    <tbody id="chargemix-table-body"></tbody>
+                </table>
+            </div>
+            <div id="chargemix-chart"></div>
+        </div>
+
+        <!-- 5. Customers with Software Turned Off -->
+        <div class="mb-12 p-8 bg-white rounded-2xl shadow-xl">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="factory" class="text-indigo-500"></i>
+                <span>5. Customers with Software Turned Off</span>
+            </h2>
+            <ul id="software-off-list" class="list-none space-y-4"></ul>
+        </div>
+        
+        <!-- 6. Module Use Status -->
+        <div class="mb-12 p-8 bg-white rounded-2xl shadow-xl">
+             <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="bar-chart-2" class="text-indigo-500"></i>
+                <span>6. Module Use Status</span>
+            </h2>
+            
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">6A. Section - Production Plan</h3>
+            <div class="overflow-x-auto mb-8">
+                 <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Customer Name</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Plan Created Prev. Period</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Plan Created Curr. Period</th>
+                        </tr>
+                    </thead>
+                    <tbody id="production-plan-table-body"></tbody>
+                 </table>
+            </div>
+            <div id="production-plan-chart"></div>
+            
+            <h3 class="text-xl font-semibold text-gray-700 mt-12 mb-4">6B. Section - Heat Plan</h3>
+             <div class="overflow-x-auto mb-8">
+                 <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Customer Name</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Created Prev</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Completed Prev</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Created Curr</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Completed Curr</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Last Completed</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Avg/Day</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Benchmark</th>
+                        </tr>
+                    </thead>
+                    <tbody id="heat-plan-table-body"></tbody>
+                 </table>
+            </div>
+            <div id="heat-plan-chart"></div>
+            
+            <h3 class="text-xl font-semibold text-gray-700 mt-12 mb-4">6C. Section - EAF</h3>
+            <div class="overflow-x-auto mb-8">
+                 <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Customer Name</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Heats Submitted Prev</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Heats Submitted Curr</th>
+                        </tr>
+                    </thead>
+                    <tbody id="melting-section-table-body"></tbody>
+                 </table>
+            </div>
+            <div id="melting-section-chart"></div>
+        </div>
+        
+        <!-- 7. HMT Section -->
+        <div class="mb-12 p-8 bg-white rounded-2xl shadow-xl">
+             <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="hard-hat" class="text-indigo-500"></i>
+                <span>7. HMT Section - Test Report Processing</span>
+            </h2>
+            <div id="hmt-reports-container" class="space-y-8"></div>
+            <h3 class="text-xl font-semibold text-gray-700 mt-12 mb-4">Consolidated HMT Report Data</h3>
+            <div id="hmt-consolidated-chart"></div>
+        </div>
+
+        <!-- 8. MTC Section -->
+        <div class="mb-12 p-8 bg-white rounded-2xl shadow-xl">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="file-text" class="text-indigo-500"></i>
+                <span>8. Casting Report - MTC</span>
+            </h2>
+            <div class="overflow-x-auto mb-8">
+                 <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Customer Name</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Overall Certificates</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Pending</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Completed</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Submitted (Prev)</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Submitted (Curr)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mtc-table-body"></tbody>
+                 </table>
+            </div>
+             <div id="mtc-chart"></div>
+        </div>
+
+        <!-- 9. Hardware Monitoring -->
+        <div class="p-8 bg-white rounded-2xl shadow-xl">
+             <h2 class="text-3xl font-extrabold text-gray-800 mb-6 flex items-center space-x-3">
+                <i data-lucide="tablet" class="text-indigo-500"></i>
+                <span>9. Hardware Monitoring</span>
+            </h2>
+            <div class="overflow-x-auto mb-8">
+                 <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Device Name</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Onboarded</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Assigned</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Active (Last 1 Day)</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Active (Last 5 Days)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hardware-table-body"></tbody>
+                 </table>
+            </div>
+             <div id="hardware-chart"></div>
+        </div>
+
+        <!-- Conclusion & Meaningful Remarks -->
+        <div class="mt-16 p-8 bg-white rounded-2xl shadow-xl">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-6">Insights</h2>
+            <div id="remarks-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Remarks will be inserted here by JavaScript -->
+            </div>
+        </div>
+
+    </div>
+
+<script>
+// Data object from the React component
+const data = {
+    summary: [
+        { name: 'Paid Customers', 'Previous Period': 101, 'Current Period': 106 },
+        { name: 'New Customers', 'Previous Period': 5, 'Current Period': 6 },
+        { name: 'Dropped Customers', 'Previous Period': 8, 'Current Period': 0 },
+    ],
+    newCustomers: [
+        { name: 'RBA EXPORTS PRIVATE LIMITED TN', feature: 'Suggestion + HMT + MTC', cluster: 'Tamil Nadu', subCluster: 'Coimbatore' },
+        { name: 'Shimoga Precision Castings Pvt. Ltd.', feature: 'Suggestion Reading', cluster: 'Karnataka', subCluster: 'Shimoga' },
+        { name: 'Plasma Alloys Pvt. Ltd.', feature: 'Only Reading + HMT + MTC', cluster: 'Gujarat', subCluster: 'Rajkot' },
+        { name: 'Rekha Metals Pvt. Ltd.', feature: 'Suggestion Reading', cluster: 'Maharashtra', subCluster: 'Kolhapur' },
+        { name: 'Indo Shell Cast Pvt Ltd (Unit 2)', feature: 'AI', cluster: 'Tamil Nadu', subCluster: 'Chennai' },
+        { name: 'Parvati Industries', feature: 'HMT + MTC', cluster: 'Maharashtra', subCluster: 'Kolhapur' },
+    ],
+    usageGroups: {
+        totalActive: 112,
+        groups: [
+            { name: 'ChargeMix Users', count: 5 },
+            { name: 'Software Off', count: 4 },
+            { name: 'Software ON', count: 103 },
+        ],
+        featureBreakdown: [
+            { name: 'Whatsapp (Only Reading)', value: 5 },
+            { name: 'Whatsapp (Compared Reading)', value: 11 },
+            { name: 'Whatsapp (Suggestion Reading)', value: 87 },
+        ],
+    },
+    chargemix: [
+        { name: 'Alchemy Precision Cast Pvt Ltd', 'Prev': 42, 'Curr': 79, optimized: 78 },
+        { name: 'Brakes India Foundry Division Shollinganallur', 'Prev': 14, 'Curr': 13, optimized: 13 },
+        { name: 'Brakes India Foundry Division Naidupet', 'Prev': 20, 'Curr': 2, optimized: 2 },
+        { name: 'Brakes India Pvt Ltd (Flometallic Unit)', 'Prev': 0, 'Curr': 0, optimized: 0 },
+        { name: 'Brakes India Pvt Ltd UNIT2', 'Prev': 0, 'Curr': 0, optimized: 0 },
+    ],
+    softwareOff: [
+        { name: 'CRESCENT FOUNDRY CO PVT.LTD.', remark: 'Previous Period', feature: 'Charge Mix', cluster: 'West Bengal', subCluster: 'Howrah' },
+        { name: 'Airking Industries', remark: 'Previous Period', feature: 'Suggestion + HMT + MTC', cluster: 'Gujarat', subCluster: 'Rajkot' },
+        { name: 'SAN PRECISION ALLOYS PRIVATE LIMITED', remark: 'Previous Period', feature: 'Compared Reading', cluster: 'Tamil Nadu', subCluster: 'Coimbatore' },
+        { name: 'Top-Gear Metals Pvt Ltd', remark: 'Previous Period', feature: 'Suggestion', cluster: 'Maharashtra', subCluster: 'Kolhapur' },
+    ],
+    moduleUse: {
+        productionPlan: [
+            { name: 'CRESCENT FOUNDRY CO PVT.LTD.(GJ)', 'Plan Created Prev. Period': 6, 'Plan Created Curr. Period': 6 },
+            { name: 'Sapre Precision Techologies', 'Plan Created Prev. Period': 5, 'Plan Created Curr. Period': 4 },
+            { name: 'Mal Metalliks Pvt. Ltd.', 'Plan Created Prev. Period': 1, 'Plan Created Curr. Period': 0 },
+            { name: 'Vishwakarma Founders Pvt Ltd', 'Plan Created Prev. Period': 1, 'Plan Created Curr. Period': 0 },
+            { name: 'NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY)', 'Plan Created Prev. Period': 0, 'Plan Created Curr. Period': 0 },
+            { name: 'Shree Kedar metals', 'Plan Created Prev. Period': 0, 'Plan Created Curr. Period': 4 },
+        ],
+        heatPlan: [
+            { name: 'CRESCENT FOUNDRY CO PVT.LTD.(GJ)', 'Created Prev': 98, 'Completed Prev': 66, 'Created Curr': 156, 'Completed Curr': 55, 'Last Completion Date': '20-July-25', 'Avg/Day': 10.4, 'Benchmark': 40 },
+            { name: 'Mal Metalliks Pvt. Ltd.', 'Created Prev': 1440, 'Completed Prev': 483, 'Created Curr': 870, 'Completed Curr': 328, 'Last Completion Date': '30-July-25', 'Avg/Day': 39.55, 'Benchmark': 60 },
+            { name: 'MANTRI METALLICS PVT LTD', 'Created Prev': 0, 'Completed Prev': 0, 'Created Curr': 154, 'Completed Curr': 65, 'Last Completion Date': '25-July-25', 'Avg/Day': 17.11, 'Benchmark': '-' },
+            { name: 'NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY)', 'Created Prev': 199, 'Completed Prev': 63, 'Created Curr': 49, 'Completed Curr': 18, 'Last Completion Date': '1-July-25', 'Avg/Day': 16.33, 'Benchmark': 70 },
+            { name: 'P.C.Sons Castings Pvt Ltd', 'Created Prev': 0, 'Completed Prev': 0, 'Created Curr': 11, 'Completed Curr': 0, 'Last Completion Date': '-', 'Avg/Day': '11', 'Benchmark': '-' },
+            { name: 'Sapre Precision Techologies', 'Created Prev': 71, 'Completed Prev': 16, 'Created Curr': 13, 'Completed Curr': 3, 'Last Completion Date': '15-July-25', 'Avg/Day': 2.17, 'Benchmark': 15 },
+            { name: 'Shree Kedar metals', 'Created Prev': 110, 'Completed Prev': 83, 'Created Curr': 187, 'Completed Curr': 121, 'Last Completion Date': '30-July-25', 'Avg/Day': 9.84, 'Benchmark': 15 },
+            { name: 'Vishwakarma Founders Pvt Ltd', 'Created Prev': 1937, 'Completed Prev': 561, 'Created Curr': 1662, 'Completed Curr': 553, 'Last Completion Date': '30-July-25', 'Avg/Day': 63.92, 'Benchmark': 45 },
+            { name: 'Yash Metallics Pvt Ltd', 'Created Prev': 3, 'Completed Prev': 1, 'Created Curr': 0, 'Completed Curr': 0, 'Last Completion Date': '11-June-25', 'Avg/Day': 3, 'Benchmark': 60 },
+        ],
+        meltingSection: [
+            { name: 'LOCO CASTINGS PRIVATE LIMITED', 'Prev Period': 62, 'Curr Period': 77 },
+            { name: 'Titagarh Rail Systems Limited (HED)', 'Prev Period': 261, 'Curr Period': 268 },
+            { name: 'TITAGARH STEEL', 'Prev Period': 245, 'Curr Period': 211 },
+        ]
+    },
+    hmt: [
+        { name: 'Vishwakarma Founders Pvt Ltd', reports: [
+            { type: 'Hardness', lastCreated: '26-Jul-2025', prev: 375, curr: 290, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Microstructure', lastCreated: '30-Jul-2025', prev: 376, curr: 355, failCount: 40, failRate: 11.08, remark: 'Improper file format (Docx)' },
+            { type: 'Tensile', lastCreated: '27-Jul-2025', prev: 38, curr: 33, failCount: 0, failRate: 0, remark: '' }
+        ]},
+        { name: 'MANTRI METALLICS PVT LTD', reports: [
+            { type: 'Hardness', lastCreated: '30-Jul-2025', prev: 262, curr: 407, failCount: 14, failRate: 2.62, remark: 'OCR service unavailable' },
+            { type: 'Microstructure', lastCreated: '30-Jul-2025', prev: 1553, curr: 1674, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Tensile', lastCreated: '30-Jul-2025', prev: 169, curr: 194, failCount: 8, failRate: 3.79, remark: 'File type change (csv to pdf)' }
+        ]},
+        { name: 'Mal Metalliks Pvt. Ltd.', reports: [
+            { type: 'Hardness', lastCreated: '4-Jul-2025', prev: 61, curr: 17, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Microstructure', lastCreated: '21-Jul-2025', prev: 1159, curr: 1015, failCount: 20, failRate: 1.97, remark: 'Empty files' },
+            { type: 'Tensile', lastCreated: '29-Jul-2025', prev: 2, curr: 0, failCount: null, failRate: null, remark: '' }
+        ]},
+        { name: 'CRESCENT FOUNDRY CO PVT.LTD.(GJ)', reports: [
+            { type: 'Hardness', lastCreated: '19-Jul-2025', prev: 1, curr: 3, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Microstructure', lastCreated: '19-Jul-2025', prev: 7, curr: 0, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Tensile', lastCreated: '19-Jul-2025', prev: 1, curr: 1, failCount: 0, failRate: 0, remark: '' }
+        ]},
+        { name: 'RBA EXPORTS PRIVATE LIMITED TN', reports: [
+            { type: 'Hardness', lastCreated: '29-Jul-2025', prev: 0, curr: 8, failCount: 1, failRate: 12.50, remark: 'Test file' },
+            { type: 'Microstructure', lastCreated: '29-Jul-2025', prev: 0, curr: 7, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Tensile', lastCreated: '26-Jul-2025', prev: 0, curr: 7, failCount: 1, failRate: 14.29, remark: 'Test file' }
+        ]},
+        { name: 'NIPHA EXPORTS PVT. LTD. SRP', reports: [
+            { type: 'Hardness', lastCreated: '6-Feb-2025', prev: 0, curr: 0, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Microstructure', lastCreated: '30-Jul-2025', prev: 672, curr: 669, failCount: 1, failRate: 0.15, remark: 'Test file' },
+            { type: 'Tensile', lastCreated: '23-Jun-2025', prev: 1, curr: 0, failCount: 0, failRate: 0, remark: '' }
+        ]},
+        { name: 'Parvati Foundry', reports: [
+            { type: 'Hardness			', lastCreated: '17-Jul-2025', prev: 0, curr: 1, failCount: 1, failRate: 100, remark: 'File format not decided' },
+            { type: 'Tensile			', lastCreated: '17-Jul-2025', prev: 0, curr: 7, failCount: 7, failRate: 100, remark: 'New installation' }
+        ]},
+        { name: 'Unimech Industries Pvt Ltd', reports: [
+            { type: 'Hardness', lastCreated: '21-Jul-2025', prev: 0, curr: 11, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Tensile', lastCreated: '30-Jul-2025', prev: 75, curr: 194, failCount: 0, failRate: 0, remark: '' }
+        ]},
+        { name: 'Mantri Metallics Pvt Ltd Pantnagar', reports: [
+            { type: 'Hardness', lastCreated: '22-Jul-2025', prev: 30, curr: 139, failCount: 12, failRate: 8.0, remark: 'OCR service unavailable' },
+            { type: 'Tensile', lastCreated: '30-Jul-2025', prev: 29, curr: 41, failCount: 3, failRate: 4.62, remark: 'Pending from P. Prakash' }
+        ]},
+        { name: 'KALYAN STEEL PRODUCTS PVT LTD', reports: [
+            { type: 'Hardness', lastCreated: '23-Jun-2025', prev: 2, curr: 0, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Microstructure', lastCreated: '18-Jun-2025', prev: 1, curr: 0, failCount: 0, failRate: 0, remark: '' }
+        ]},
+        { name: 'Airking Industries', reports: [
+            { type: 'Microstructure', lastCreated: '26-Jul-2025', prev: 156, curr: 19, failCount: 0, failRate: 0, remark: '' }
+        ]},
+        { name: 'Sapre Precision Techologies', reports: [
+            { type: 'Microstructure', lastCreated: '23-Jul-2025', prev: 31, curr: 53, failCount: 0, failRate: 0, remark: '' },
+            { type: 'Tensile', lastCreated: '20-Jul-2025', prev: 0, curr: 9, failCount: 0, failRate: 0, remark: '' }
+        ]},
+        { name: 'GOVIND STEEL', reports: [
+            { type: 'Microstructure', lastCreated: '30-Jul-2025', prev: 583, curr: 1140, failCount: 0, failRate: 0, remark: '' }
+        ]},
+        { name: 'Shree Kedar metals', reports: [
+            { type: 'Tensile', lastCreated: '25-Jul-2025', prev: 0, curr: 2, failCount: 0, failRate: 0, remark: '' }
+        ]}
+    ],
+    mtc: [
+        { name: 'Vishwakarma Founders Pvt Ltd', total: 11, pending: 6, completed: 5, prev: 3, curr: 0 },
+        { name: 'Airking Industries', total: 3, pending: 2, completed: 1, prev: 1, curr: 0 },
+        { name: 'NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY)', total: 4, pending: 1, completed: 3, prev: 0, curr: 0 },
+        { name: 'Mal Metalliks Pvt. Ltd.', total: 12, pending: 12, completed: 0, prev: 6, curr: 1 },
+        { name: 'CRESCENT FOUNDRY CO PVT.LTD.(GJ)', total: 5, pending: 1, completed: 4, prev: 2, curr: 1 },
+        { name: 'GOVIND Steel', total: 2, pending: 1, completed: 1, prev: 0, curr: 2 },
+        { name: 'Unimech Industries Pvt Ltd', total: 2, pending: 2, completed: 0, prev: 0, curr: 2 },
+        { name: 'KALYAN STEEL PRODUCTS PVT LTD', total: 0, pending: 0, completed: 0, prev: 0, curr: 0 },
+        { name: 'Sapre Precision Techologies', total: 0, pending: 0, completed: 0, prev: 0, curr: 0 },
+        { name: 'Luthra', total: 0, pending: 0, completed: 0, prev: 0, curr: 0 },
+        { name: 'Shree Kedar metals', total: 0, pending: 0, completed: 0, prev: 0, curr: 0 },
+    ],
+    hardware: [
+        { name: 'Spectro TV', onboarded: 47, assigned: 82, oneday: 40, fivedays: 47 },
+        { name: 'Spectro-Tablet', onboarded: 11, assigned: 11, oneday: 2, fivedays: 2 },
+        { name: 'DigiMelt-IF', onboarded: 6, assigned: 8, oneday: 4, fivedays: 4 },
+        { name: 'DigiMelt-EAF', onboarded: 4, assigned: 5, oneday: 3, fivedays: 3 },
+        { name: 'Heat Plan-Tablet', onboarded: 1, assigned: 4, oneday: 1, fivedays: 0 },
+    ]
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Helper Functions
+    const createInfoCard = (icon, title, value, subtext, color) => `
+        <div class="p-6 rounded-2xl shadow-xl flex items-center space-x-4 transition-all duration-300 transform hover:scale-105 ${color}">
+            <div class="p-3 bg-white bg-opacity-20 rounded-full text-white">
+                <i data-lucide="${icon}" size="24"></i>
+            </div>
+            <div class="flex flex-col">
+                <div class="text-4xl font-bold text-white">${value}</div>
+                <div class="text-white text-opacity-80 text-sm mt-1">${title}</div>
+                ${subtext ? `<div class="text-xs text-white text-opacity-60 mt-2">${subtext}</div>` : ''}
+            </div>
+        </div>`;
+    
+    const createInsightCard = (icon, title, content) => `
+        <div class="bg-gray-50 p-6 rounded-xl shadow-sm flex items-start space-x-4">
+            <div class="p-3 bg-indigo-100 rounded-full text-indigo-700">
+                <i data-lucide="${icon}"></i>
+            </div>
+            <div>
+                <h4 class="text-xl font-semibold text-gray-800 mb-2">${title}</h4>
+                <p class="text-gray-600">${content}</p>
+            </div>
+        </div>
+    `;
+
+    const aggregateHmtData = () => {
+        const aggregated = {};
+        data.hmt.forEach(customer => {
+            customer.reports.forEach(report => {
+                if (!aggregated[report.type]) {
+                    aggregated[report.type] = {
+                        name: report.type,
+                        'Prev Period': 0,
+                        'Curr Period': 0,
+                        'Parsing Fail Count': 0
+                    };
+                }
+                aggregated[report.type]['Prev Period'] += report.prev || 0;
+                aggregated[report.type]['Curr Period'] += report.curr || 0;
+                aggregated[report.type]['Parsing Fail Count'] += report.failCount || 0;
+            });
+        });
+        return Object.values(aggregated);
+    };
+    const aggregatedHmtData = aggregateHmtData();
+
+    // --- RENDER DYNAMIC CONTENT ---
+
+    // 1. Summary Cards
+    const summaryCardsContainer = document.getElementById('summary-cards');
+    summaryCardsContainer.innerHTML = 
+        createInfoCard('users', 'Paid Customers', data.summary[0]['Current Period'], `vs. ${data.summary[0]['Previous Period']} (Previous)`, 'bg-green-500') +
+        createInfoCard('trending-up', 'New Customers', data.summary[1]['Current Period'], `vs. ${data.summary[1]['Previous Period']} (Previous)`, 'bg-blue-500') +
+        createInfoCard('trending-down', 'Dropped Customers', data.summary[2]['Current Period'], `vs. ${data.summary[2]['Previous Period']} (Previous)`, 'bg-red-500');
+
+    // 2. New Customers List
+    const newCustomersList = document.getElementById('new-customers-list');
+    newCustomersList.innerHTML = data.newCustomers.map(customer => `
+        <li class="bg-gray-50 p-4 rounded-xl flex items-center justify-between shadow-sm hover:shadow-lg transition-shadow duration-300">
+            <div class="flex flex-col">
+                <span class="font-semibold text-gray-800">${customer.name}</span>
+                <span class="text-sm text-gray-500">${customer.cluster} - ${customer.subCluster}</span>
+            </div>
+            <div class="flex items-center space-x-2 text-sm text-indigo-600">
+                <i data-lucide="chevron-right" size="16"></i>
+                <span>Opt-in Feature: ${customer.feature}</span>
+            </div>
+        </li>
+    `).join('');
+
+    // 3. Key Usage Groupings
+    document.getElementById('total-active-customers').innerHTML = `Total Active Paid Customers: <span class="font-bold text-indigo-600">${data.usageGroups.totalActive}</span>`;
+
+    // 4. ChargeMix Table
+    const chargemixTableBody = document.getElementById('chargemix-table-body');
+    chargemixTableBody.innerHTML = data.chargemix.map(row => `
+        <tr class="border-t border-gray-200">
+            <td class="px-4 py-2 text-sm text-gray-700">${row.name}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Prev']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Curr']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.optimized}</td>
+        </tr>
+    `).join('');
+    
+    // 5. Software Off List
+    const softwareOffList = document.getElementById('software-off-list');
+    softwareOffList.innerHTML = data.softwareOff.map(customer => `
+         <li class="bg-red-50 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between">
+            <div>
+                <span class="font-semibold text-gray-800">${customer.name}</span>
+                <span class="text-sm text-gray-500 block sm:inline ml-0 sm:ml-2">(${customer.cluster})</span>
+            </div>
+            <div class="text-sm text-gray-600 mt-2 sm:mt-0">
+                <span class="font-medium mr-2">Remarks:</span>
+                ${customer.remark} - ${customer.feature}
+            </div>
+        </li>
+    `).join('');
+    
+    // 6. Module Use Tables
+    document.getElementById('production-plan-table-body').innerHTML = data.moduleUse.productionPlan.map(row => `
+        <tr class="border-t border-gray-200">
+            <td class="px-4 py-2 text-sm text-gray-700">${row.name}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Plan Created Prev. Period']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Plan Created Curr. Period']}</td>
+        </tr>
+    `).join('');
+
+    document.getElementById('heat-plan-table-body').innerHTML = data.moduleUse.heatPlan.map(row => `
+        <tr class="border-t border-gray-200">
+            <td class="px-4 py-2 text-sm text-gray-700">${row.name}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Created Prev']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Completed Prev']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Created Curr']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Completed Curr']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Last Completion Date']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Avg/Day']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Benchmark']}</td>
+        </tr>
+    `).join('');
+    
+    document.getElementById('melting-section-table-body').innerHTML = data.moduleUse.meltingSection.map(row => `
+        <tr class="border-t border-gray-200">
+            <td class="px-4 py-2 text-sm text-gray-700">${row.name}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Prev Period']}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row['Curr Period']}</td>
+        </tr>
+    `).join('');
+
+    // 7. HMT Reports
+    const hmtReportsContainer = document.getElementById('hmt-reports-container');
+    hmtReportsContainer.innerHTML = data.hmt.map(customer => `
+        <div class="p-6 bg-gray-50 rounded-xl shadow-md">
+            <h4 class="font-bold text-lg text-gray-800 mb-4">${customer.name}</h4>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Report Type</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Prev Period</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Curr Period</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Fail Count</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Fail %</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Last Created</th>
+                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600">Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${customer.reports.map(report => `
+                            <tr class="border-t border-gray-200">
+                                <td class="px-4 py-2 text-sm text-gray-700">${report.type}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700">${report.prev}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700">${report.curr}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700">${report.failCount ?? '-'}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700">${report.failRate ? `${report.failRate.toFixed(2)}%` : '-'}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700">${report.lastCreated}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700">${report.remark || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `).join('');
+    
+    // 8. MTC Table
+    document.getElementById('mtc-table-body').innerHTML = data.mtc.map(row => `
+        <tr class="border-t border-gray-200">
+            <td class="px-4 py-2 text-sm text-gray-700">${row.name}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.total}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.pending}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.completed}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.prev}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.curr}</td>
+        </tr>
+    `).join('');
+
+    // 9. Hardware Table
+    document.getElementById('hardware-table-body').innerHTML = data.hardware.map(row => `
+        <tr class="border-t border-gray-200">
+            <td class="px-4 py-2 text-sm text-gray-700">${row.name}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.onboarded}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.assigned}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.oneday}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${row.fivedays}</td>
+        </tr>
+    `).join('');
+
+    // Meaningful Remarks
+    const remarksContainer = document.getElementById('remarks-container');
+    remarksContainer.innerHTML = 
+        createInsightCard('check-circle', 'Customer Growth & Stability', "We've achieved a net gain in paid customers with a successful period of zero dropped customers. This stability is a strong indicator of customer satisfaction.") +
+        createInsightCard('lightbulb', 'Feature Usage Insights', "The 'Suggestion Reading' feature is highly popular, highlighting its value. This insight can guide future product development and marketing efforts.") +
+        createInsightCard('trending-up', 'ChargeMix Adoption', "While one customer shows a healthy increase in ChargeMix usage, most have remained static. This presents a key opportunity for targeted engagement.") +
+        createInsightCard('alert-triangle', 'HMT Parsing Issues', "The HMT section reveals a high rate of parsing failures due to improper file formats and OCR issues (only for new customers, which is now been fixed).") +
+        createInsightCard('message-circle', 'MTC Certificate Follow-up', "A significant number of MTC reports are still pending. Proactive outreach to these customers is crucial to improve their experience and increase module adoption.") +
+        createInsightCard('tablet', 'Hardware Engagement Gap', "Usage of Spectro-Tablet and Heat Plan-Tablet is low compared to other devices. Focused support and troubleshooting are required to ensure customers use all hardware to its full potential.");
+
+
+    // --- RENDER CHARTS ---
+    const defaultBarOptions = {
+        chart: { type: 'bar', height: 300, toolbar: { show: false } },
+        plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 } },
+        dataLabels: { 
+            enabled: true,
+            offsetY: -20,
+            style: {
+                fontSize: '12px',
+                colors: ["#304758"]
+            }
+        },
+        stroke: { show: true, width: 2, colors: ['transparent'] },
+        xaxis: { categories: [], labels: { style: { colors: '#6b7280' }}},
+        yaxis: { labels: { style: { colors: '#6b7280' }}},
+        fill: { opacity: 1 },
+        legend: { position: 'top', horizontalAlign: 'right' },
+        tooltip: { theme: 'dark' }
+    };
+    
+    // 1. Summary Chart
+    const summaryChart = new ApexCharts(document.querySelector("#summary-chart"), {
+        ...defaultBarOptions,
+        series: [
+            { name: 'Previous Period', data: data.summary.map(d => d['Previous Period']) },
+            { name: 'Current Period', data: data.summary.map(d => d['Current Period']) }
+        ],
+        xaxis: { categories: data.summary.map(d => d.name) },
+        colors: ['#a5b4fc', '#6366f1']
+    });
+    summaryChart.render();
+    
+    // 3a. Usage Groups Chart
+    const usageGroupsChart = new ApexCharts(document.querySelector("#usage-groups-chart"), {
+        ...defaultBarOptions,
+        series: [{ name: 'Count', data: data.usageGroups.groups.map(d => d.count) }],
+        xaxis: { categories: data.usageGroups.groups.map(d => d.name) },
+        colors: ['#6366f1']
+    });
+    usageGroupsChart.render();
+    
+    // 3b. Feature Breakdown Pie Chart
+    const featureBreakdownChart = new ApexCharts(document.querySelector("#feature-breakdown-chart"), {
+        chart: { type: 'pie', height: 350 },
+        series: data.usageGroups.featureBreakdown.map(d => d.value),
+        labels: data.usageGroups.featureBreakdown.map(d => d.name),
+        colors: ['#3b82f6', '#10b981', '#f59e0b'],
+        legend: { position: 'bottom' },
+        tooltip: { theme: 'dark', y: { formatter: (val) => val } },
+        dataLabels: { enabled: true, formatter: (val, opts) => opts.w.globals.labels[opts.seriesIndex] + ": " + val.toFixed(0) },
+        responsive: [{ breakpoint: 480, options: { chart: { width: 250 }, legend: { position: 'bottom' }}}]
+    });
+    featureBreakdownChart.render();
+    
+    // 4. ChargeMix Chart
+    const chargemixChart = new ApexCharts(document.querySelector("#chargemix-chart"), {
+        ...defaultBarOptions,
+        chart: { ...defaultBarOptions.chart, height: 350 },
+        series: [
+            { name: 'Created/Modified (Prev)', data: data.chargemix.map(d => d['Prev']) },
+            { name: 'Created/Modified (Curr)', data: data.chargemix.map(d => d['Curr']) },
+            { name: 'Optimized ChargeMix Count', data: data.chargemix.map(d => d.optimized) }
+        ],
+        xaxis: { categories: data.chargemix.map(d => d.name), labels: { ...defaultBarOptions.xaxis.labels, rotate: -45, trim: true, style: { fontSize: '10px' } } },
+        colors: ['#a5b4fc', '#6366f1', '#10b981'],
+    });
+    chargemixChart.render();
+    
+    // 6a. Production Plan Chart
+    const productionPlanChart = new ApexCharts(document.querySelector("#production-plan-chart"), {
+        ...defaultBarOptions,
+        series: [
+            { name: 'Prev. Period', data: data.moduleUse.productionPlan.map(d => d['Plan Created Prev. Period']) },
+            { name: 'Curr. Period', data: data.moduleUse.productionPlan.map(d => d['Plan Created Curr. Period']) }
+        ],
+        xaxis: { categories: data.moduleUse.productionPlan.map(d => d.name), labels: { ...defaultBarOptions.xaxis.labels, rotate: -45, trim: true, style: { fontSize: '10px' } } },
+        colors: ['#a5b4fc', '#6366f1']
+    });
+    productionPlanChart.render();
+    
+    // 6b. Heat Plan Chart
+    const heatPlanChart = new ApexCharts(document.querySelector("#heat-plan-chart"), {
+        ...defaultBarOptions,
+        series: [
+            { name: 'Created (Prev)', data: data.moduleUse.heatPlan.map(d => d['Created Prev']) },
+            { name: 'Created (Curr)', data: data.moduleUse.heatPlan.map(d => d['Created Curr']) },
+            { name: 'Completed (Prev)', data: data.moduleUse.heatPlan.map(d => d['Completed Prev']) },
+            { name: 'Completed (Curr)', data: data.moduleUse.heatPlan.map(d => d['Completed Curr']) }
+        ],
+        xaxis: { categories: data.moduleUse.heatPlan.map(d => d.name), labels: { ...defaultBarOptions.xaxis.labels, rotate: -45, trim: true, style: { fontSize: '10px' } } },
+        colors: ['#a5b4fc', '#6366f1', '#10b981', '#f59e0b'],
+        grid: { borderColor: '#e5e7eb', strokeDashArray: 4 }
+    });
+    heatPlanChart.render();
+
+    // 6c. Melting Section Chart
+    const meltingSectionChart = new ApexCharts(document.querySelector("#melting-section-chart"), {
+        ...defaultBarOptions,
+        series: [
+            { name: 'Heats Submitted (Prev)', data: data.moduleUse.meltingSection.map(d => d['Prev Period']) },
+            { name: 'Heats Submitted (Curr)', data: data.moduleUse.meltingSection.map(d => d['Curr Period']) }
+        ],
+        xaxis: { categories: data.moduleUse.meltingSection.map(d => d.name), labels: { ...defaultBarOptions.xaxis.labels, rotate: -45, trim: true, style: { fontSize: '10px' } } },
+        colors: ['#a5b4fc', '#6366f1']
+    });
+    meltingSectionChart.render();
+
+    // 7. HMT Consolidated Chart
+    const hmtConsolidatedChart = new ApexCharts(document.querySelector("#hmt-consolidated-chart"), {
+        ...defaultBarOptions,
+        series: [
+            { name: 'Prev Period', data: aggregatedHmtData.map(d => d['Prev Period']) },
+            { name: 'Curr Period', data: aggregatedHmtData.map(d => d['Curr Period']) },
+            { name: 'Parsing Fail Count', data: aggregatedHmtData.map(d => d['Parsing Fail Count']) }
+        ],
+        xaxis: { categories: aggregatedHmtData.map(d => d.name) },
+        colors: ['#a5b4fc', '#6366f1', '#ef4444']
+    });
+    hmtConsolidatedChart.render();
+    
+    // 8. MTC Chart
+    const mtcChart = new ApexCharts(document.querySelector("#mtc-chart"), {
+        ...defaultBarOptions,
+        series: [
+            { name: 'Submitted (Prev)', data: data.mtc.map(d => d.prev) },
+            { name: 'Submitted (Curr)', data: data.mtc.map(d => d.curr) }
+        ],
+        xaxis: { categories: data.mtc.map(d => d.name), labels: { ...defaultBarOptions.xaxis.labels, rotate: -45, trim: true, style: { fontSize: '10px' } } },
+        colors: ['#a5b4fc', '#6366f1']
+    });
+    mtcChart.render();
+
+    // 9. Hardware Chart
+    const hardwareChart = new ApexCharts(document.querySelector("#hardware-chart"), {
+        ...defaultBarOptions,
+        series: [
+            { name: 'Onboarded', data: data.hardware.map(d => d.onboarded) },
+            { name: 'Assigned', data: data.hardware.map(d => d.assigned) },
+            { name: 'Active (1 Day)', data: data.hardware.map(d => d.oneday) },
+            { name: 'Active (5 Days)', data: data.hardware.map(d => d.fivedays) }
+        ],
+        xaxis: { categories: data.hardware.map(d => d.name), labels: { ...defaultBarOptions.xaxis.labels, rotate: -45, trim: true, style: { fontSize: '10px' } } },
+        colors: ['#6366f1', '#a5b4fc', '#10b981', '#f59e0b']
+    });
+    hardwareChart.render();
+
+    // Initialize Lucide Icons
+    lucide.createIcons();
+});
+</script>
+
+</body>
 </html>
+
