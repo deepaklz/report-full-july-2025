@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heat Plan Usability Report</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a clean, modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles to enhance the UI */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* A light gray background */
+        }
+        /* Style for status pills */
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-completed { background-color: #dcfce7; color: #166534; }
+        .status-ongoing { background-color: #ffedd5; color: #9a3412; }
+        .status-pending { background-color: #fee2e2; color: #991b1b; }
+        .status-pouring { background-color: #dbeafe; color: #1e40af; }
+        .status-default { background-color: #e5e7eb; color: #374151; }
+
+        /* Simple transition for table rows for a smoother filtering effect */
+        tbody tr {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header Section -->
+        <header class="mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Heat Plan Usability Report</h1>
+            <p class="mt-2 text-lg text-gray-600">An overview of heat plan statuses and performance metrics.</p>
+        </header>
+
+        <!-- Search and Filter Section -->
+        <div class="mb-6">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <!-- Heroicon: search -->
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <input type="text" id="searchInput" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Search by customer, melter, status...">
+            </div>
+        </div>
+
+        <!-- Data Table Section -->
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Melter</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Heat Count</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Time (Hrs)</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Data rows will be injected here by JavaScript -->
+                         <tr><td colspan="7" class="text-center p-8 text-gray-500">Loading data...</td></tr>
+                    </tbody>
+                </table>
+                 <div id="noResults" class="hidden text-center p-8 text-gray-500">
+                    <h3 class="text-xl font-semibold">No Results Found</h3>
+                    <p>Your search query did not match any records.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights Section Removed -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tableBody = document.getElementById('reportTableBody');
+            const searchInput = document.getElementById('searchInput');
+            const noResultsDiv = document.getElementById('noResults');
+            let fullData = [];
+
+            // --- EMBEDDED CSV DATA ---
+            // This data was originally from 'Grouped_Heat_Plan_Summary.csv'
+            const rawCsvData = `sn,customer,melter,shift,status,count_of_id,avg_time_taken_to_complete_heats
+1,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Chandan,A shift,COMPLETED,3,12.01
+2,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Chandan,B shift,POURING,1,0.28
+3,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Om Prakash,A shift,COMPLETED,44,3.27
+4,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Om Prakash,A shift,ONGOING,1,
+5,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Om Prakash,A shift,POURING,4,4.8
+6,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Om Prakash,B shift,COMPLETED,4,1.61
+7,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Om Prakash,B shift,ONGOING,1,
+8,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Prathamesh Shinde,A shift,COMPLETED,61,2.85
+9,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Prathamesh Shinde,A shift,POURING,4,1.395
+10,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Prathamesh Shinde,B shift,COMPLETED,2,5.295
+11,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Prathamesh Shinde,B shift,POURING,2,1.135
+12,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Tripurari,A shift,COMPLETED,1,97.15
+13,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Viplove,A shift,COMPLETED,62,11.04666667
+14,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Viplove,A shift,ONGOING,3,
+15,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Viplove,A shift,POURING,12,4.45
+16,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Viplove,B shift,COMPLETED,2,1.48
+17,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Viplove,B shift,ONGOING,1,15.57
+18,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Om Prakash,A shift,PENDING,78,
+19,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Om Prakash,B shift,PENDING,42,
+20,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Prathamesh Shinde,A shift,PENDING,44,
+21,CRESCENT FOUNDRY CO PVT.LTD.(GJ),Prathamesh Shinde,B shift,PENDING,11,
+22,Mal Metalliks Pvt. Ltd.,Ajay,Shift A,COMPLETED,185,64.7
+23,Mal Metalliks Pvt. Ltd.,Ajay,Shift A,ONGOING,64,20.79
+24,Mal Metalliks Pvt. Ltd.,Ajay,Shift B,COMPLETED,82,360.82
+25,Mal Metalliks Pvt. Ltd.,Ajay,Shift B,ONGOING,45,10.17
+26,Mal Metalliks Pvt. Ltd.,Ajay,Shift C,COMPLETED,61,285.63
+27,Mal Metalliks Pvt. Ltd.,Ajay,Shift C,ONGOING,16,0.82
+28,Mal Metalliks Pvt. Ltd.,Chitranjan,Shift A,COMPLETED,177,-684
+29,Mal Metalliks Pvt. Ltd.,Chitranjan,Shift A,ONGOING,31,219.95
+30,Mal Metalliks Pvt. Ltd.,Chitranjan,Shift B,COMPLETED,54,-23312.39
+31,Mal Metalliks Pvt. Ltd.,Chitranjan,Shift B,ONGOING,20,557.53
+32,Mal Metalliks Pvt. Ltd.,Chitranjan,Shift C,COMPLETED,140,2211.81
+33,Mal Metalliks Pvt. Ltd.,Chitranjan,Shift C,ONGOING,35,4.3
+34,Mal Metalliks Pvt. Ltd.,Nitish,Shift A,ONGOING,2,1721.03
+35,Mal Metalliks Pvt. Ltd.,Nitish,Shift B,COMPLETED,2,34.88
+36,Mal Metalliks Pvt. Ltd.,Sachin,Shift A,COMPLETED,550,202.85
+37,Mal Metalliks Pvt. Ltd.,Sachin,Shift A,ONGOING,138,61.67
+38,Mal Metalliks Pvt. Ltd.,Sachin,Shift B,COMPLETED,175,13119.865
+39,Mal Metalliks Pvt. Ltd.,Sachin,Shift B,ONGOING,105,39.93
+40,Mal Metalliks Pvt. Ltd.,Sachin,Shift C,COMPLETED,57,-620.61
+41,Mal Metalliks Pvt. Ltd.,Sachin,Shift C,ONGOING,24,
+42,Mal Metalliks Pvt. Ltd.,Nitish,Shift B,PENDING,2,
+43,Mal Metalliks Pvt. Ltd.,Rakesh Lab,Shift A,PENDING,1138,
+44,Mal Metalliks Pvt. Ltd.,Rakesh Lab,Shift B,PENDING,800,
+45,Mal Metalliks Pvt. Ltd.,Rakesh Lab,Shift C,PENDING,634,
+46,Mal Metalliks Pvt. Ltd.,Santosh,Shift A,PENDING,23,
+47,Mal Metalliks Pvt. Ltd.,Santosh,Shift B,PENDING,25,
+48,Mal Metalliks Pvt. Ltd.,Santosh,Shift C,PENDING,10,
+49,MANTRI METALLICS PVT LTD,Milind Pednekar,A,COMPLETED,43,44.16
+50,MANTRI METALLICS PVT LTD,Milind Pednekar,A,ONGOING,7,
+51,MANTRI METALLICS PVT LTD,Milind Pednekar,B,COMPLETED,7,45.2
+52,MANTRI METALLICS PVT LTD,Milind Pednekar,B,ONGOING,5,
+53,MANTRI METALLICS PVT LTD,Milind Pednekar,B,POURING,1,2.35
+54,MANTRI METALLICS PVT LTD,Milind Pednekar,C,COMPLETED,1,2.53
+55,MANTRI METALLICS PVT LTD,Milind Pednekar,C,ONGOING,1,
+56,MANTRI METALLICS PVT LTD,Milind Pednekar,A,PENDING,59,
+57,MANTRI METALLICS PVT LTD,Milind Pednekar,B,PENDING,14,
+58,MANTRI METALLICS PVT LTD,Milind Pednekar,C,PENDING,16,
+59,Masta Casting,Ujjal Demo,Shift A,PENDING,18,
+60,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Ankit Anurag,A,COMPLETED,2,1.48
+61,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Arnab Roy,A,COMPLETED,67,5.05
+62,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Arnab Roy,B,COMPLETED,4,1.48
+63,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Debojyoti,A,COMPLETED,36,3.08
+64,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Debojyoti,B,COMPLETED,2,3.27
+65,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Kuntal,A,COMPLETED,3,2.63
+66,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Kuntal,A,ONGOING,1,13.42
+67,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Manas Pal,A,COMPLETED,3,3.29
+68,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Sayan,B,COMPLETED,5,2.53
+69,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Sourin Pal,A,COMPLETED,2,130.15
+70,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Manas Pal,A,PENDING,195,
+71,NIPHA EXPORTS PVT. LTD. SRP (FOUNDRY),Manas Pal,B,PENDING,3,
+72,P.C.Sons Castings Pvt Ltd,M.A. Vijay,A,PENDING,11,
+73,Sapre Precision Techologies,Abhijeet,1,COMPLETED,11,3.04
+74,Sapre Precision Techologies,Abhijeet,1,POURING,11,35.98
+75,Sapre Precision Techologies,Abhijeet,2,COMPLETED,2,1.01
+76,Sapre Precision Techologies,Abhijeet,2,ONGOING,1,
+77,Sapre Precision Techologies,Abhijeet,3,ONGOING,1,
+78,Sapre Precision Techologies,Suraj Dhenge,1,POURING,2,7.58
+79,Sapre Precision Techologies,Abhijeet,1,PENDING,5,
+80,Sapre Precision Techologies,Abhijeet,2,PENDING,3,
+81,Sapre Precision Techologies,Tanaji Patil,1,PENDING,110,
+82,Sapre Precision Techologies,Tanaji Patil,2,PENDING,1,
+83,Shree Kedar metals,Atul,1 st,COMPLETED,97,3.68
+84,Shree Kedar metals,Atul,1 st,ONGOING,9,123.16
+85,Shree Kedar metals,Atul,1 st,POURING,1,1.85
+86,Shree Kedar metals,Atul,2nd,COMPLETED,35,1.94
+87,Shree Kedar metals,Atul,2nd,ONGOING,7,2.28
+88,Shree Kedar metals,Munwar,1 st,COMPLETED,7,1.33
+89,Shree Kedar metals,Munwar,1 st,ONGOING,4,
+90,Shree Kedar metals,Munwar,2nd,COMPLETED,1,18.22
+91,Shree Kedar metals,Shankar,1 st,COMPLETED,100,2.39
+92,Shree Kedar metals,Shankar,1 st,ONGOING,3,
+93,Shree Kedar metals,Shankar,1 st,POURING,1,1.22
+94,Shree Kedar metals,Shankar,2nd,COMPLETED,16,1.92
+95,Shree Kedar metals,Swapnil,1 st,COMPLETED,28,2.23
+96,Shree Kedar metals,Swapnil,2nd,COMPLETED,4,10822.9
+97,Shree Kedar metals,Madhav ji,1 st,PENDING,1,
+98,Shree Kedar metals,Munwar,1 st,PENDING,132,
+99,Shree Kedar metals,Munwar,2nd,PENDING,27,
+100,Vishwakarma Founders Pvt Ltd,Shubham patil,A,COMPLETED,346,305.56
+101,Vishwakarma Founders Pvt Ltd,Shubham patil,A,ONGOING,5,
+102,Vishwakarma Founders Pvt Ltd,Shubham patil,A,POURING,30,82.31
+103,Vishwakarma Founders Pvt Ltd,Shubham patil,B,COMPLETED,594,446.225
+104,Vishwakarma Founders Pvt Ltd,Shubham patil,B,ONGOING,9,39.18
+105,Vishwakarma Founders Pvt Ltd,Shubham patil,B,POURING,7,53.02
+106,Vishwakarma Founders Pvt Ltd,Shubham patil,C,COMPLETED,215,792.605
+107,Vishwakarma Founders Pvt Ltd,Shubham patil,C,ONGOING,3,163.2
+108,Vishwakarma Founders Pvt Ltd,Shubham patil,C,POURING,1,95.83
+109,Vishwakarma Founders Pvt Ltd,Vikas Patil,A,COMPLETED,42,15.86
+110,Vishwakarma Founders Pvt Ltd,Vikas Patil,A,ONGOING,7,
+111,Vishwakarma Founders Pvt Ltd,Vikas Patil,A,POURING,1,11.03
+112,Vishwakarma Founders Pvt Ltd,Vikas Patil,B,COMPLETED,8,17.275
+113,Vishwakarma Founders Pvt Ltd,Vikas Patil,B,ONGOING,5,
+114,Vishwakarma Founders Pvt Ltd,Abhijeet,A,PENDING,1,
+115,Vishwakarma Founders Pvt Ltd,Shubham patil,A,PENDING,182,
+116,Vishwakarma Founders Pvt Ltd,Shubham patil,B,PENDING,442,
+117,Vishwakarma Founders Pvt Ltd,Shubham patil,C,PENDING,158,
+118,Vishwakarma Founders Pvt Ltd,Vikas Patil,A,PENDING,792,
+119,Vishwakarma Founders Pvt Ltd,Vikas Patil,B,PENDING,1133,
+120,Vishwakarma Founders Pvt Ltd,Vikas Patil,C,PENDING,395,
+121,Yash Metallics Pvt Ltd,Sachin,A,COMPLETED,19,1.405
+122,Yash Metallics Pvt Ltd,Sachin,A,ONGOING,4,
+123,Yash Metallics Pvt Ltd,Sachin,B,COMPLETED,6,2.22
+124,Yash Metallics Pvt Ltd,Sandip,A,COMPLETED,27,1.03
+125,Yash Metallics Pvt Ltd,Sandip,B,COMPLETED,45,1.125
+126,Yash Metallics Pvt Ltd,Sandip,C,COMPLETED,27,1.28
+127,Yash Metallics Pvt Ltd,Satish Patil,A,COMPLETED,3,1.55
+128,Yash Metallics Pvt Ltd,Satish Patil,B,COMPLETED,2,1.14
+129,Yash Metallics Pvt Ltd,Satish Patil,C,COMPLETED,3,1.395
+130,Yash Metallics Pvt Ltd,Sachin,A,PENDING,3,
+131,Yash Metallics Pvt Ltd,Sachin,B,PENDING,1,
+132,Yash Metallics Pvt Ltd,Sandip,C,PENDING,1,
+133,Yash Metallics Pvt Ltd,Sangram Khot,A,PENDING,2,
+134,Yash Metallics Pvt Ltd,Sangram Khot,B,PENDING,1,
+135,Yash Metallics Pvt Ltd,Sangram Khot,C,PENDING,1,
+136,Yash Metallics Pvt Ltd,Satish Patil,A,PENDING,15,
+137,Yash Metallics Pvt Ltd,Satish Patil,B,PENDING,11,
+138,Yash Metallics Pvt Ltd,Satish Patil,C,PENDING,5,`;
+
+            // --- 1. PARSE CSV DATA ---
+            function parseCSV(text) {
+                const lines = text.trim().split(/\r\n|\n/);
+                const headers = lines[0].split(',').map(h => h.trim());
+                const data = lines.slice(1).map(line => {
+                    // This regex handles commas inside quoted fields, though the sample doesn't seem to have them.
+                    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    const obj = {};
+                    headers.forEach((header, index) => {
+                        obj[header] = values[index] ? values[index].trim() : '';
+                    });
+                    return obj;
+                });
+                return data;
+            }
+
+            // Function to load data (now uses embedded data)
+            function loadData() {
+                fullData = parseCSV(rawCsvData);
+                renderTable(fullData);
+                // Removed generateInsights(fullData);
+            }
+
+            // --- 2. RENDER TABLE ---
+            function renderTable(data) {
+                tableBody.innerHTML = ''; // Clear existing rows
+                noResultsDiv.classList.add('hidden');
+
+                if (data.length === 0) {
+                    noResultsDiv.classList.remove('hidden');
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50";
+
+                    // Status pill styling
+                    const status = (row.status || '').toLowerCase();
+                    let statusClass = 'status-default';
+                    if (status === 'completed') statusClass = 'status-completed';
+                    else if (status === 'ongoing') statusClass = 'status-ongoing';
+                    else if (status === 'pending') statusClass = 'status-pending';
+                    else if (status === 'pouring') statusClass = 'status-pouring';
+                    
+                    const avgTime = row.avg_time_taken_to_complete_heats || 'N/A';
+
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row.customer || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.melter || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.shift || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-pill ${statusClass}">${row.status || 'N/A'}</span></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">${row.count_of_id || '0'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">${avgTime}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.user || 'N/A'}</td>
+                    `;
+                    fragment.appendChild(tr);
+                });
+                tableBody.appendChild(fragment);
+            }
+
+            // --- 3. FILTER LOGIC ---
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredData = fullData.filter(row => {
+                    // Check against all values in the row object
+                    return Object.values(row).some(value =>
+                        String(value).toLowerCase().includes(searchTerm)
+                    );
+                });
+                renderTable(filteredData);
+            });
+
+            // --- 4. GENERATE INSIGHTS ---
+            // Removed generateInsights function
+
+            // Initial load
+            loadData();
+        });
+    </script>
+
+</body>
+</html>
